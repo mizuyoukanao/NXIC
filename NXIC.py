@@ -13,6 +13,10 @@ time.sleep(0.5)
 
 gadget = os.open('/dev/hidg0', os.O_RDWR | os.O_NONBLOCK)
 mouse = os.open('/dev/hidraw0', os.O_RDWR | os.O_NONBLOCK)
+
+#Change here if you want to adjust the mouse sensitivity
+mouse_threshold = 12
+
 counter = 0
 mac_addr = 'D4F0578D7423'
 initial_input = '81008000f8d77a22c87b0c'
@@ -82,10 +86,10 @@ def get_mouse_input():
         os._exit(1)
 
 def calc_gyro():
-    global gyrox, gyroy, gyroz, x, y
+    global gyrox, gyroy, gyroz, x, y, mouse_threshold
     gyrox = 0
-    gyroy = int((y / 12) * 57.3 / 0.070)
-    gyroz = int(-((x / 12) * 57.3 / 0.070))
+    gyroy = int((y / mouse_threshold) * 57.3 / 0.070)
+    gyroz = int(-((x / mouse_threshold) * 57.3 / 0.070))
 
 def get_mouse_and_calc_gyro():
     while True:

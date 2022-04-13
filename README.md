@@ -10,6 +10,7 @@ NX Input Converterとは,キーボード・マウスの入力をRaspberry piを�
 | K | B |
 | I | X |
 | J | Y |
+| Y | Y Button Hold |
 | R | L |
 | E | ZL |
 | Q | Lclick |

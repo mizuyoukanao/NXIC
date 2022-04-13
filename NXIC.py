@@ -17,6 +17,8 @@ mouse = os.open('/dev/hidraw0', os.O_RDWR | os.O_NONBLOCK)
 #Change here if you want to adjust the mouse sensitivity
 mouse_threshold = 12
 
+y_hold = False
+
 counter = 0
 mac_addr = 'D4F0578D7423'
 initial_input = '81008000f8d77a22c87b0c'
@@ -121,7 +123,13 @@ def input_response():
         if keyboard.is_pressed('i'):
             #X
             buf[1] |= 0x02
-        if keyboard.is_pressed('j'):
+        #y button hold
+        if keyboard.is_pressed('y'):
+            if y_hold:
+                y_hold = False
+            else:
+                y_hold = True
+        if keyboard.is_pressed('j') or y_hold:
             #Y
             buf[1] |= 0x01
         if keyboard.is_pressed('f'):

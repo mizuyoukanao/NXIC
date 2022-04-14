@@ -109,7 +109,7 @@ def botoru():
 
 
 def input_response():
-    global loopcount, bleft, bright, bmiddle, gyrox, gyroy, gyroz 
+    global loopcount, bleft, bright, bmiddle, gyrox, gyroy, gyroz, y_hold
     while True:
         buf = bytearray.fromhex(initial_input)
         buf[2] = 0x00

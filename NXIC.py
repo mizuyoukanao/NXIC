@@ -4,6 +4,7 @@ import os
 import threading
 import time
 import keyboard
+import signal
 
 # Reset USB Gadget
 os.system('echo > /sys/kernel/config/usb_gadget/procon/UDC')
@@ -14,10 +15,15 @@ time.sleep(0.5)
 gadget = os.open('/dev/hidg0', os.O_RDWR | os.O_NONBLOCK)
 mouse = os.open('/dev/hidraw0', os.O_RDWR | os.O_NONBLOCK)
 
-#Change here if you want to adjust the mouse sensitivity
-mouse_threshold = 12
+#Change here if you want to adjust the mouse sensitivity.
+#If the mouse sends x,y values in 8 bits, this value is approximately 12.
+#In the case of 16bit, this value is approximately 3000.
+mouse_threshold = 3000
 
-y_hold = False
+#If the x,y values taken from the mouse are 16 bits each, set to True.
+#If the x,y value does not start from the second byte (the first byte is probably the button input, but there is an unnecessary byte after it), enter the number of bytes to be skipped in the offset.
+xy_is_16bit = True
+xy_offset = 0
 
 counter = 0
 mac_addr = 'D4F0578D7423'
@@ -31,6 +37,7 @@ y = 0
 gyrox = 0
 gyroy = 0
 gyroz = 0
+y_hold = False
 
 def countup():
     global counter
@@ -41,7 +48,7 @@ def countup():
 def response(code, cmd, data):
     buf = bytearray([code, cmd])
     buf.extend(data)
-    #buf.extend(bytearray(50-len(buf)))
+    buf.extend(bytearray(64-len(buf)))
     print(buf.hex())
     try:
         os.write(gadget, buf)
@@ -56,6 +63,15 @@ def uart_response(code, subcmd, data):
     buf.extend(data)
     response(0x21, counter, buf)
 
+def disconnect_response():
+    buf = bytearray.fromhex(initial_input)
+    buf.extend([0x80, 0x30])
+    response(0x21, counter, buf)
+    buf[10] = 0x0a
+    response(0x21, counter, buf)
+    buf[10] = 0x09
+    response(0x21, counter, buf)
+
 def spi_response(addr, data):
     buf = bytearray(addr)
     buf.extend([0x00, 0x00])
@@ -66,7 +82,7 @@ def spi_response(addr, data):
 def get_mouse_input():
     global bleft, bright, bmiddle, x, y
     try:
-        buf = os.read(mouse, 4)
+        buf = os.read(mouse, 64)
         if (buf[0] & 1) == 1:
             bleft = True
         else:
@@ -79,8 +95,14 @@ def get_mouse_input():
             bmiddle = True
         else:
             bmiddle = False
-        x = -(buf[1] & 0b10000000) | (buf[1] & 0b01111111)
-        y = -(buf[2] & 0b10000000) | (buf[2] & 0b01111111)
+        if xy_is_16bit:
+            nonsigx = (buf[1+xy_offset] << 8) | buf[2+xy_offset]
+            nonsigy = (buf[3+xy_offset] << 8) | buf[4+xy_offset]
+            x = (int(nonsigx^0xffff) * -1)-1 if (nonsigx & 0x8000) else int(nonsigx)
+            y = (int(nonsigy^0xffff) * -1)-1 if (nonsigy & 0x8000) else int(nonsigy)
+        else:
+            x = -(buf[1] & 0b10000000) | (buf[1] & 0b01111111)
+            y = -(buf[2] & 0b10000000) | (buf[2] & 0b01111111)
     except BlockingIOError:
         x = 0
         y = 0
@@ -268,7 +290,15 @@ def simulate_procon():
         except:
             os._exit(1)
 
+def hand(signal, frame):
+    disconnect_response()
+    os.system('echo > /sys/kernel/config/usb_gadget/procon/UDC')
+    os.system('ls /sys/class/udc > /sys/kernel/config/usb_gadget/procon/UDC')
+    time.sleep(0.5)
+    os._exit(1)
+
 threading.Thread(target=simulate_procon).start()
 threading.Thread(target=countup).start()
 threading.Thread(target=get_mouse_and_calc_gyro).start()
 threading.Thread(target=botoru).start()
+signal.signal(signal.SIGINT, hand)

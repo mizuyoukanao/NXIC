@@ -32,6 +32,8 @@ loopcount = False
 bleft = False
 bright = False
 bmiddle = False
+bprev = False
+bnext = False
 x = 0
 y = 0
 gyrox = 0
@@ -80,7 +82,7 @@ def spi_response(addr, data):
     uart_response(0x90, 0x10, buf)
 
 def get_mouse_input():
-    global bleft, bright, bmiddle, x, y
+    global bleft, bright, bmiddle, bprev, bnext, x, y
     try:
         buf = os.read(mouse, 64)
         if (buf[0] & 1) == 1:
@@ -95,6 +97,14 @@ def get_mouse_input():
             bmiddle = True
         else:
             bmiddle = False
+        if (buf[0] & 8) == 8:
+            bprev = True
+        else:
+            bprev = False
+        if (buf[0] & 16) == 16:
+            bnext = True
+        else:
+            bnext = False
         if xy_is_16bit:
             nonsigx = (buf[1+xy_offset] << 8) | buf[2+xy_offset]
             nonsigy = (buf[3+xy_offset] << 8) | buf[4+xy_offset]
@@ -131,15 +141,15 @@ def botoru():
 
 
 def input_response():
-    global loopcount, bleft, bright, bmiddle, gyrox, gyroy, gyroz, y_hold
+    global loopcount, bleft, bright, bmiddle, bprev, bnext, gyrox, gyroy, gyroz, y_hold
     while True:
         buf = bytearray.fromhex(initial_input)
         buf[2] = 0x00
-        if keyboard.is_pressed('l'):
+        if keyboard.is_pressed('l') or bnext:
             #A
             #print("A")
             buf[1] |= 0x08
-        if keyboard.is_pressed('k'):
+        if keyboard.is_pressed('k') or bprev:
             #B
             buf[1] |= 0x04
         if keyboard.is_pressed('i'):

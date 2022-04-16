@@ -15,6 +15,8 @@ time.sleep(0.5)
 gadget = os.open('/dev/hidg0', os.O_RDWR | os.O_NONBLOCK)
 mouse = os.open('/dev/hidraw0', os.O_RDWR | os.O_NONBLOCK)
 
+#////////////////////////////////USERCONFIG////////////////////////////////////
+
 #Change here if you want to adjust the mouse sensitivity.
 #If the mouse sends x,y values in 8 bits, this value is approximately 12.
 #In the case of 16bit, this value is approximately 3000.
@@ -24,6 +26,11 @@ mouse_threshold = 3000
 #If the x,y value does not start from the second byte (the first byte is probably the button input, but there is an unnecessary byte after it), enter the number of bytes to be skipped in the offset.
 xy_is_16bit = True
 xy_offset = 0
+
+#If the byte signifying the button press is not the first, enter the number of bytes to be skipped in the offset.
+button_offset = 0
+
+#//////////////////////////////////////////////////////////////////////////////
 
 counter = 0
 mac_addr = 'D4F0578D7423'
@@ -82,26 +89,26 @@ def spi_response(addr, data):
     uart_response(0x90, 0x10, buf)
 
 def get_mouse_input():
-    global bleft, bright, bmiddle, bprev, bnext, x, y
+    global bleft, bright, bmiddle, bprev, bnext, x, y, button_offset, xy_offset
     try:
         buf = os.read(mouse, 64)
-        if (buf[0] & 1) == 1:
+        if (buf[0+button_offset] & 1) == 1:
             bleft = True
         else:
             bleft = False
-        if (buf[0] & 2) == 2:
+        if (buf[0+button_offset] & 2) == 2:
             bright = True
         else:
             bright = False
-        if (buf[0] & 4) == 4:
+        if (buf[0+button_offset] & 4) == 4:
             bmiddle = True
         else:
             bmiddle = False
-        if (buf[0] & 8) == 8:
+        if (buf[0+button_offset] & 8) == 8:
             bprev = True
         else:
             bprev = False
-        if (buf[0] & 16) == 16:
+        if (buf[0+button_offset] & 16) == 16:
             bnext = True
         else:
             bnext = False
